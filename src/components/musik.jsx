@@ -1,9 +1,8 @@
+// src/components/Musik.jsx
+
 import { useState } from "react";
 
-// Din Spotify access token (indsæt din token her)
-const ACCESS_TOKEN = "BQBoZR4zaC09mrIX5h4coF3o6tDrnMQ3bVdu2JLoCMrcEbSSQqMccF9t64sLxTeb0wOmD6X6AsVYaOtHaBS67y2VuTofX5Uz3gXCaDu4u_9D23RefLABaUARbLtMhYHZIbKUP0-339U3U-ZYj77CCSrHxAYVR3qmm31bUNVXXqtmx34q9a-no4DiLE3P9J6u1FqtxgFe2Vn0fdd7Wt-Cqh4kD-Lzu6Zj_jorb8IewFL2o-PltGhJnf7xHXu3MMdf9JjN74VfGWlp1NnyUMscGd3N18nrTJEt_RDv";
-
-function Musik() {
+function Musik({ token }) {
     const [query, setQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [selectedTracks, setSelectedTracks] = useState([]);
@@ -11,9 +10,8 @@ function Musik() {
     const [loading, setLoading] = useState(false);
     const [playlistCreated, setPlaylistCreated] = useState(null);
 
-    const token = ACCESS_TOKEN;
+    if (!token) return <p>Ingen adgangstoken – log ind først.</p>;
 
-    // Søgefunktion mod Spotify API
     const searchTracks = async (e) => {
         e.preventDefault();
         if (!query) return;
@@ -23,9 +21,7 @@ function Musik() {
             const res = await fetch(
                 `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`,
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                 }
             );
             const data = await res.json();
@@ -36,33 +32,29 @@ function Musik() {
         setLoading(false);
     };
 
-    // Tilføj sang til valgt liste (undgå dubletter)
     const addTrack = (track) => {
         if (selectedTracks.find((t) => t.id === track.id)) return;
         setSelectedTracks([...selectedTracks, track]);
     };
 
-    // Fjern sang fra valgt liste
     const removeTrack = (trackId) => {
         setSelectedTracks(selectedTracks.filter((t) => t.id !== trackId));
     };
 
-    // Opret playlist på brugerens konto med valgte sange
     const createPlaylist = async () => {
         if (!playlistName || selectedTracks.length === 0) {
             alert("Indtast et playlist navn og vælg mindst én sang.");
             return;
         }
+
         setLoading(true);
         try {
-            // Hent brugerens ID
             const userRes = await fetch("https://api.spotify.com/v1/me", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const userData = await userRes.json();
             const userId = userData.id;
 
-            // Opret playlist
             const playlistRes = await fetch(
                 `https://api.spotify.com/v1/users/${userId}/playlists`,
                 {
@@ -80,7 +72,6 @@ function Musik() {
             );
             const playlistData = await playlistRes.json();
 
-            // Tilføj sange til playlist
             const uris = selectedTracks.map((track) => track.uri);
             await fetch(`https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`, {
                 method: "POST",
@@ -177,7 +168,6 @@ function Musik() {
                         frameBorder="0"
                         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                         loading="lazy"
-                        style={{ minHeight: "360px" }}
                     />
                 </div>
             )}
