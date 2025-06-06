@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 
-const client_id = "0a1f34c851e94dd6ada75b625bbbd89d";
-const redirect_uri = "https://musik-fun.onrender.com";
+// Din Spotify access token (indsæt din token her)
+const ACCESS_TOKEN = "BQBoZR4zaC09mrIX5h4coF3o6tDrnMQ3bVdu2JLoCMrcEbSSQqMccF9t64sLxTeb0wOmD6X6AsVYaOtHaBS67y2VuTofX5Uz3gXCaDu4u_9D23RefLABaUARbLtMhYHZIbKUP0-339U3U-ZYj77CCSrHxAYVR3qmm31bUNVXXqtmx34q9a-no4DiLE3P9J6u1FqtxgFe2Vn0fdd7Wt-Cqh4kD-Lzu6Zj_jorb8IewFL2o-PltGhJnf7xHXu3MMdf9JjN74VfGWlp1NnyUMscGd3N18nrTJEt_RDv";
 
 function Musik() {
     const [topTracks, setTopTracks] = useState([]);
     const [playlist, setPlaylist] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [token, setToken] = useState(localStorage.getItem("spotify_token") || "");
+
+    // Vi bruger konstant token her
+    const token = ACCESS_TOKEN;
 
     const fetchWebApi = async (endpoint, method, body) => {
         const res = await fetch(`https://api.spotify.com/${endpoint}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
             },
             method,
             body: body ? JSON.stringify(body) : null,
@@ -31,7 +34,8 @@ function Musik() {
     };
 
     const createPlaylist = async (tracksUri) => {
-        const { id: user_id } = await fetchWebApi("v1/me", "GET");
+        const user = await fetchWebApi("v1/me", "GET");
+        const user_id = user.id;
 
         const playlist = await fetchWebApi(`v1/users/${user_id}/playlists`, "POST", {
             name: "My top tracks playlist",
@@ -39,30 +43,14 @@ function Musik() {
             public: false,
         });
 
-        await fetchWebApi(
-            `v1/playlists/${playlist.id}/tracks?uris=${tracksUri.join(",")}`,
-            "POST"
-        );
+        await fetchWebApi(`v1/playlists/${playlist.id}/tracks`, "POST", {
+            uris: tracksUri,
+        });
 
         return playlist;
     };
 
-    // 🔁 Fang token fra URL (Implicit Grant Flow)
     useEffect(() => {
-        const hash = window.location.hash;
-        const accessToken = new URLSearchParams(hash.substring(1)).get("access_token");
-
-        if (accessToken && !token) {
-            localStorage.setItem("spotify_token", accessToken);
-            setToken(accessToken);
-            window.history.replaceState({}, document.title, "/");
-        }
-    }, [token]);
-
-    // Hent data og lav playlist
-    useEffect(() => {
-        if (!token) return;
-
         async function fetchData() {
             try {
                 const tracks = await getTopTracks();
@@ -79,29 +67,7 @@ function Musik() {
         }
 
         fetchData();
-    }, [token]);
-
-    const authorize = () => {
-        const scopes = [
-            "playlist-modify-private",
-            "user-read-private",
-            "user-read-email",
-            "user-top-read",
-        ];
-        const authUrl = `https://accounts.spotify.com/authorize?client_id=${client_id}&response_type=token&redirect_uri=${encodeURIComponent(
-            redirect_uri
-        )}&scope=${scopes.join("%20")}`;
-        window.location = authUrl;
-    };
-
-    if (!token) {
-        return (
-            <div style={{ padding: "1rem" }}>
-                <h2>Log ind med Spotify</h2>
-                <button onClick={authorize}>Log ind</button>
-            </div>
-        );
-    }
+    }, []);
 
     return (
         <div style={{ padding: "1rem" }}>
@@ -135,15 +101,6 @@ function Musik() {
                     )}
                 </>
             )}
-            <br />
-            <button
-                onClick={() => {
-                    localStorage.removeItem("spotify_token");
-                    setToken("");
-                }}
-            >
-                Log ud
-            </button>
         </div>
     );
 }
